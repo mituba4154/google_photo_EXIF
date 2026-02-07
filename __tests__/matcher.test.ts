@@ -151,4 +151,77 @@ describe('matchJsonToImages', () => {
     expect(result.unmatched.images.length).toBe(0);
     expect(result.unmatched.jsons.length).toBe(0);
   });
+
+  test('Shortened supplemental: .suppl.json', async () => {
+    const imgPath = path.join(TEST_DIR, 'suppl', 'photo.png');
+    const jsonPath = path.join(TEST_DIR, 'suppl', 'photo.png.suppl.json');
+    await createFile(imgPath, 'fake-image');
+    await createFile(jsonPath, makeJson('photo.png'));
+
+    const result = await matchJsonToImages([imgPath], [jsonPath]);
+    expect(result.matched.length).toBe(1);
+    expect(result.matched[0].matchConfidence).toBe('exact');
+    expect(result.unmatched.images.length).toBe(0);
+    expect(result.unmatched.jsons.length).toBe(0);
+  });
+
+  test('Shortened supplemental: .supplemental-meta.json', async () => {
+    const imgPath = path.join(TEST_DIR, 'supp-meta', 'video.mp4');
+    const jsonPath = path.join(TEST_DIR, 'supp-meta', 'video.mp4.supplemental-meta.json');
+    await createFile(imgPath, 'fake-video');
+    await createFile(jsonPath, makeJson('video.mp4'));
+
+    const result = await matchJsonToImages([imgPath], [jsonPath]);
+    expect(result.matched.length).toBe(1);
+    expect(result.matched[0].matchConfidence).toBe('exact');
+  });
+
+  test('Shortened supplemental: .su.json', async () => {
+    const imgPath = path.join(TEST_DIR, 'su', 'screenshot.jpg');
+    const jsonPath = path.join(TEST_DIR, 'su', 'screenshot.jpg.su.json');
+    await createFile(imgPath, 'fake-image');
+    await createFile(jsonPath, makeJson('screenshot.jpg'));
+
+    const result = await matchJsonToImages([imgPath], [jsonPath]);
+    expect(result.matched.length).toBe(1);
+    expect(result.matched[0].matchConfidence).toBe('exact');
+  });
+
+  test('Double dot: image.jpeg..json', async () => {
+    const imgPath = path.join(TEST_DIR, 'ddot', 'IMG_001.jpeg');
+    const jsonPath = path.join(TEST_DIR, 'ddot', 'IMG_001.jpeg..json');
+    await createFile(imgPath, 'fake-image');
+    await createFile(jsonPath, makeJson('IMG_001.jpeg'));
+
+    const result = await matchJsonToImages([imgPath], [jsonPath]);
+    expect(result.matched.length).toBe(1);
+    expect(result.matched[0].matchConfidence).toBe('exact');
+  });
+
+  test('Space+number pattern: supplemental-metadata{N}.json', async () => {
+    const imgPath = path.join(TEST_DIR, 'spacenum', 'IMG3174 1.JPG');
+    const jsonPath = path.join(TEST_DIR, 'spacenum', 'IMG3174 .JPG.supplemental-metadata1.json');
+    await createFile(imgPath, 'fake-image');
+    await createFile(jsonPath, makeJson('IMG3174 1.JPG'));
+
+    const result = await matchJsonToImages([imgPath], [jsonPath]);
+    expect(result.matched.length).toBe(1);
+    expect(result.matched[0].matchConfidence).toBe('exact');
+  });
+
+  test('Shortened supplemental: .supplemental-met.json and .supplemental.json', async () => {
+    const img1 = path.join(TEST_DIR, 'supp-short', 'quote_1.png');
+    const json1 = path.join(TEST_DIR, 'supp-short', 'quote_1.png.supplemental-met.json');
+    const img2 = path.join(TEST_DIR, 'supp-short', 'minecraft.jpg');
+    const json2 = path.join(TEST_DIR, 'supp-short', 'minecraft.jpg.supplemental.json');
+    await createFile(img1, 'fake-image-1');
+    await createFile(json1, makeJson('quote_1.png'));
+    await createFile(img2, 'fake-image-2');
+    await createFile(json2, makeJson('minecraft.jpg'));
+
+    const result = await matchJsonToImages([img1, img2], [json1, json2]);
+    expect(result.matched.length).toBe(2);
+    expect(result.unmatched.images.length).toBe(0);
+    expect(result.unmatched.jsons.length).toBe(0);
+  });
 });
