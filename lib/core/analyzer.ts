@@ -28,7 +28,7 @@ export async function analyzeTakeoutFolder(
 
   // 2. ファイル分類
   const images = files.filter((f) => isImageOrVideo(f));
-  const jsons = files.filter((f) => f.endsWith('.json'));
+  const jsons = files.filter((f) => f.endsWith('.json') || f.endsWith('.supplemental-metadata.json'));
 
   // 3. フォルダパターン検出
   const yearFolders = detectYearFolders(files);
