@@ -8,8 +8,9 @@ import { logger } from '@/lib/utils/logger';
 let exiftool: ExifTool | null = null;
 
 /** ExifTool インスタンスを取得（遅延初期化） */
-export function getExifTool(maxProcs = 4): ExifTool {
+export function getExifTool(maxProcs = 8): ExifTool {
   if (!exiftool) {
+    // Increased default maxProcs from 4 to 8 for better parallelization
     exiftool = new ExifTool({ maxProcs, taskTimeoutMillis: 30000 });
   }
   return exiftool;
@@ -43,13 +44,25 @@ export async function writeExifFromJson(
 ): Promise<void> {
   const et = getExifTool(options.maxConcurrency);
 
-  // 1. バックアップ作成
+  // Prepare backup and read operations in parallel when possible
+  const operations: Promise<unknown>[] = [];
+
+  // 1. バックアップ作成（非同期で開始）
+  let backupPromise: Promise<void> | null = null;
   if (options.backupOriginals) {
-    await fs.copyFile(imagePath, `${imagePath}.backup`);
+    backupPromise = fs.copyFile(imagePath, `${imagePath}.backup`);
+    operations.push(backupPromise);
   }
 
-  // 2. 既存EXIF読み取り
-  const existingTags = await et.read(imagePath);
+  // 2. 既存EXIF読み取り（バックアップと並行実行）
+  const existingTagsPromise = et.read(imagePath);
+  operations.push(existingTagsPromise);
+
+  // Wait for both backup and read to complete
+  const [, existingTags] = await Promise.all([
+    backupPromise ?? Promise.resolve(),
+    existingTagsPromise,
+  ]);
 
   // 3. 上書き判定
   if (!options.overwriteExisting && existingTags.DateTimeOriginal) {
