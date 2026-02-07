@@ -49,14 +49,20 @@ export const useProcessingStore = create<ProcessingState>((set, get) => ({
     const { rootPath, processingOptions } = get();
     if (!rootPath) return;
 
-    const res = await fetch('/api/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rootPath, options: processingOptions }),
-    });
-    const data = (await res.json()) as { success: boolean; jobId?: string };
-    if (data.success && data.jobId) {
-      set({ currentJobId: data.jobId });
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rootPath, options: processingOptions }),
+      });
+      const data = (await res.json()) as { success: boolean; jobId?: string; error?: string };
+      if (data.success && data.jobId) {
+        set({ currentJobId: data.jobId });
+      } else {
+        console.error('Failed to start processing:', data.error ?? 'Unknown error');
+      }
+    } catch (err) {
+      console.error('Failed to start processing:', err);
     }
   },
 

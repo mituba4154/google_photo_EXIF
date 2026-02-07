@@ -56,7 +56,7 @@ export async function writeExifFromJson(
     logger.info('Skipping: DateTimeOriginal already exists', {
       path: imagePath,
     });
-    throw new Error('DateTimeOriginal already exists');
+    throw new Error('Skipping: DateTimeOriginal already exists and overwrite is disabled');
   }
 
   // 4. タグ構築
