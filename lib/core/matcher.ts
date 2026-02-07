@@ -19,12 +19,25 @@ export async function matchJsonToImages(
   const unmatchedImages = new Set(images);
   const unmatchedJsons = new Set(jsons);
 
+  // Pre-load all JSON metadata in parallel for better performance
+  const jsonMetadataCache = new Map<string, Awaited<ReturnType<typeof parseAndValidateJson>>>();
+  const jsonParsePromises = jsons.map(async (json) => {
+    try {
+      const metadata = await parseAndValidateJson(json);
+      jsonMetadataCache.set(json, metadata);
+    } catch (error) {
+      logger.warn('Failed to parse JSON', { path: json, error });
+      jsonMetadataCache.set(json, null);
+    }
+  });
+  await Promise.all(jsonParsePromises);
+
   // --- Strategy 1: Exact match (image.jpg ↔ image.jpg.json or image.jpg.supplemental-metadata.json) ---
   for (const json of jsons) {
     // Try standard .json format first
     let expectedImage = json.replace(/\.json$/, '');
     if (unmatchedImages.has(expectedImage)) {
-      const metadata = await parseAndValidateJson(json);
+      const metadata = jsonMetadataCache.get(json) ?? null;
       matched.push({
         imagePath: expectedImage,
         jsonPath: json,
@@ -37,7 +50,7 @@ export async function matchJsonToImages(
       // Try .supplemental-metadata.json format
       expectedImage = json.replace(/\.supplemental-metadata\.json$/, '');
       if (expectedImage !== json && unmatchedImages.has(expectedImage)) {
-        const metadata = await parseAndValidateJson(json);
+        const metadata = jsonMetadataCache.get(json) ?? null;
         matched.push({
           imagePath: expectedImage,
           jsonPath: json,
@@ -63,7 +76,7 @@ export async function matchJsonToImages(
     for (const image of [...unmatchedImages]) {
       const imageWithoutExt = image.replace(/\.[^.]+$/, '');
       if (jsonBase === imageWithoutExt) {
-        const metadata = await parseAndValidateJson(json);
+        const metadata = jsonMetadataCache.get(json) ?? null;
         matched.push({
           imagePath: image,
           jsonPath: json,
@@ -105,7 +118,7 @@ export async function matchJsonToImages(
     }
 
     if (bestMatch) {
-      const metadata = await parseAndValidateJson(json);
+      const metadata = jsonMetadataCache.get(json) ?? null;
       matched.push({
         imagePath: bestMatch,
         jsonPath: json,

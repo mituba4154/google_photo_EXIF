@@ -26,7 +26,7 @@ const defaultOptions: ProcessingOptions = {
   useGeoDataExif: false,
   writePeopleToKeywords: true,
   preserveFileTimestamps: true,
-  maxConcurrency: 4,
+  maxConcurrency: 8, // Increased from 4 to 8 for better performance with optimized parallel processing
   targetFolders: [],
 };
 
