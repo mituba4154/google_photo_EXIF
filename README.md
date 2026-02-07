@@ -1,5 +1,9 @@
 # Google Photos EXIF Restorer
 
+# Warning: This project is not yet functional.
+
+# 警告:このプロジェクトは動作しません
+
 > **[日本語](#日本語)** | **[English](#english)**
 
 ---
