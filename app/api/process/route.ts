@@ -101,16 +101,15 @@ async function processInBackground(
     const queue = new PQueue({ concurrency: options.maxConcurrency });
 
     for (const match of matches.matched) {
-      if (!match.metadata) {
-        job.skippedFiles++;
-        continue;
-      }
-
-      const meta = match.metadata;
       queue.add(async () => {
         job.currentFile = match.imagePath;
         try {
-          const result = await writeExifFromJson(match.imagePath, meta, options);
+          if (!match.metadata) {
+            job.skippedFiles++;
+            logger.info('Skipping: No valid metadata', { path: match.imagePath });
+            return;
+          }
+          const result = await writeExifFromJson(match.imagePath, match.metadata, options);
           if (result.status === 'skipped') {
             job.skippedFiles++;
           } else {

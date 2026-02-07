@@ -35,23 +35,22 @@ export async function matchJsonToImages(
   });
 
   // --- Strategy 1: Exact match (image.jpg ↔ image.jpg.json or image.jpg.supplemental-metadata.json) ---
+  // Also handles shortened supplemental forms, double-dot, and space+number patterns
   for (const json of jsons) {
-    // Try standard .json format first
-    let expectedImage = json.replace(/\.json$/, '');
-    if (unmatchedImages.has(expectedImage)) {
-      const metadata = jsonMetadataCache.get(json) ?? null;
-      matched.push({
-        imagePath: expectedImage,
-        jsonPath: json,
-        matchConfidence: 'exact',
-        metadata,
-      });
-      unmatchedImages.delete(expectedImage);
-      unmatchedJsons.delete(json);
-    } else {
-      // Try .supplemental-metadata.json format
-      expectedImage = json.replace(/\.supplemental-metadata\.json$/, '');
-      if (expectedImage !== json && unmatchedImages.has(expectedImage)) {
+    const patterns = [
+      json.replace(/\.json$/, ''),                                    // standard .json
+      json.replace(/\.supplemental-metadata\.json$/, ''),             // full supplemental
+      json.replace(/\.suppl\.json$/, ''),                             // shortened: .suppl
+      json.replace(/\.supplemental-meta\.json$/, ''),                 // shortened: .supplemental-meta
+      json.replace(/\.supplemental-met\.json$/, ''),                  // shortened: .supplemental-met
+      json.replace(/\.supplemental\.json$/, ''),                      // shortened: .supplemental
+      json.replace(/\.su\.json$/, ''),                                // shortened: .su
+      json.replace(/\.\.(json|supplemental.*\.json)$/, ''),           // double dot
+      json.replace(/ (\.[^.]+)\.supplemental-metadata(\d+)\.json$/, (_, ext, n) => ` ${n}${ext}`), // space+number
+    ].filter((p, i, arr) => p !== json && arr.indexOf(p) === i);
+
+    for (const expectedImage of patterns) {
+      if (unmatchedImages.has(expectedImage)) {
         const metadata = jsonMetadataCache.get(json) ?? null;
         matched.push({
           imagePath: expectedImage,
@@ -61,16 +60,18 @@ export async function matchJsonToImages(
         });
         unmatchedImages.delete(expectedImage);
         unmatchedJsons.delete(json);
+        break;
       }
     }
   }
 
   // --- Strategy 2: Extension match (image.jpg ↔ image.json or image.supplemental-metadata.json) ---
   for (const json of [...unmatchedJsons]) {
-    // First try to remove .supplemental-metadata.json, then fall back to .json
+    // Remove known supplemental suffixes (full and shortened), then fall back to .json
     let jsonBase;
-    if (json.endsWith('.supplemental-metadata.json')) {
-      jsonBase = json.replace(/\.supplemental-metadata\.json$/, '');
+    const supplementalPattern = /\.(supplemental-metadata|supplemental-meta|supplemental-met|supplemental|suppl|su)\.json$/;
+    if (supplementalPattern.test(json)) {
+      jsonBase = json.replace(supplementalPattern, '');
     } else {
       jsonBase = json.replace(/\.json$/, '');
     }
@@ -97,10 +98,11 @@ export async function matchJsonToImages(
     // Handle both .json and .supplemental-metadata.json
     let jsonBase = path.basename(json, '.json');
     if (jsonBase === path.basename(json)) {
-      // If .json didn't remove anything, try .supplemental-metadata.json
       const baseName = path.basename(json);
-      if (baseName.endsWith('.supplemental-metadata.json')) {
-        jsonBase = baseName.replace(/\.supplemental-metadata\.json$/, '');
+      // Try full and shortened supplemental forms
+      const suppMatch = baseName.match(/\.(supplemental-metadata|supplemental-meta|supplemental-met|supplemental|suppl|su)\.json$/);
+      if (suppMatch) {
+        jsonBase = baseName.replace(new RegExp(`\\.${suppMatch[1]}\\.json$`), '');
       }
     }
     const normalizedJson = normalizeName(jsonBase);
