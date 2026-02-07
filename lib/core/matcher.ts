@@ -23,14 +23,12 @@ export async function matchJsonToImages(
   // Use Promise.allSettled to fully isolate errors — even if parseAndValidateJson
   // throws unexpectedly, other JSON files will still be processed.
   const jsonMetadataCache = new Map<string, Awaited<ReturnType<typeof parseAndValidateJson>>>();
-  const jsonParsePromises = jsons.map(async (json) => {
-    const metadata = await parseAndValidateJson(json);
-    jsonMetadataCache.set(json, metadata);
-    return metadata;
-  });
+  const jsonParsePromises = jsons.map((json) => parseAndValidateJson(json));
   const results = await Promise.allSettled(jsonParsePromises);
   results.forEach((result, index) => {
-    if (result.status === 'rejected') {
+    if (result.status === 'fulfilled') {
+      jsonMetadataCache.set(jsons[index], result.value);
+    } else {
       logger.warn('Failed to parse JSON', { path: jsons[index], error: result.reason });
       jsonMetadataCache.set(jsons[index], null);
     }
