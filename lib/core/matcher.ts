@@ -20,17 +20,21 @@ export async function matchJsonToImages(
   const unmatchedJsons = new Set(jsons);
 
   // Pre-load all JSON metadata in parallel for better performance
+  // Use Promise.allSettled to fully isolate errors — even if parseAndValidateJson
+  // throws unexpectedly, other JSON files will still be processed.
   const jsonMetadataCache = new Map<string, Awaited<ReturnType<typeof parseAndValidateJson>>>();
   const jsonParsePromises = jsons.map(async (json) => {
-    try {
-      const metadata = await parseAndValidateJson(json);
-      jsonMetadataCache.set(json, metadata);
-    } catch (error) {
-      logger.warn('Failed to parse JSON', { path: json, error });
-      jsonMetadataCache.set(json, null);
+    const metadata = await parseAndValidateJson(json);
+    jsonMetadataCache.set(json, metadata);
+    return metadata;
+  });
+  const results = await Promise.allSettled(jsonParsePromises);
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      logger.warn('Failed to parse JSON', { path: jsons[index], error: result.reason });
+      jsonMetadataCache.set(jsons[index], null);
     }
   });
-  await Promise.all(jsonParsePromises);
 
   // --- Strategy 1: Exact match (image.jpg ↔ image.jpg.json or image.jpg.supplemental-metadata.json) ---
   for (const json of jsons) {

@@ -110,8 +110,12 @@ async function processInBackground(
       queue.add(async () => {
         job.currentFile = match.imagePath;
         try {
-          await writeExifFromJson(match.imagePath, meta, options);
-          job.processedFiles++;
+          const result = await writeExifFromJson(match.imagePath, meta, options);
+          if (result.status === 'skipped') {
+            job.skippedFiles++;
+          } else {
+            job.processedFiles++;
+          }
         } catch (error) {
           job.failedFiles++;
           job.errors.push({
