@@ -45,7 +45,8 @@ export async function matchJsonToImages(
       json.replace(/\.supplemental-met\.json$/, ''),                  // shortened: .supplemental-met
       json.replace(/\.supplemental\.json$/, ''),                      // shortened: .supplemental
       json.replace(/\.su\.json$/, ''),                                // shortened: .su
-      json.replace(/\.\.(json|supplemental.*\.json)$/, ''),           // double dot
+      json.replace(/\.\.(json|supplemental[^.]*\.json)$/, ''),        // double dot
+      // Transforms 'IMG3174 .JPG.supplemental-metadata1.json' → 'IMG3174 1.JPG'
       json.replace(/ (\.[^.]+)\.supplemental-metadata(\d+)\.json$/, (_, ext, n) => ` ${n}${ext}`), // space+number
     ].filter((p, i, arr) => p !== json && arr.indexOf(p) === i);
 
