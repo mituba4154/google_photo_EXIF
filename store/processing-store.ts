@@ -57,7 +57,7 @@ export const useProcessingStore = create<ProcessingState>((set, get) => ({
       });
       const data = (await res.json()) as { success: boolean; jobId?: string; error?: string };
       if (data.success && data.jobId) {
-        set({ currentJobId: data.jobId });
+        set({ currentJobId: data.jobId, currentJob: null });
       } else {
         console.error('Failed to start processing:', data.error ?? 'Unknown error');
       }

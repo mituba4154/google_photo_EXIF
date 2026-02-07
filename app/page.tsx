@@ -53,7 +53,10 @@ export default function Home() {
   };
 
   const isProcessing =
-    currentJob?.status === 'running' || currentJob?.status === 'pending';
+    Boolean(currentJobId) &&
+    (!currentJob ||
+      currentJob.status === 'running' ||
+      currentJob.status === 'pending');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -88,21 +91,17 @@ export default function Home() {
                 disabled={isProcessing}
               />
 
-              {!currentJobId && (
-                <div className="text-center">
-                  <button
-                    onClick={startProcessing}
-                    disabled={
-                      analysisResult.matchedPairs === 0 || isProcessing
-                    }
-                    className="rounded-md bg-green-600 px-8 py-3 text-sm font-medium text-white
-                               hover:bg-green-700 focus:ring-2 focus:ring-green-300
-                               focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    処理開始
-                  </button>
-                </div>
-              )}
+              <div className="text-center">
+                <button
+                  onClick={startProcessing}
+                  disabled={analysisResult.matchedPairs === 0 || isProcessing}
+                  className="rounded-md bg-green-600 px-8 py-3 text-sm font-medium text-white
+                             hover:bg-green-700 focus:ring-2 focus:ring-green-300
+                             focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  処理開始
+                </button>
+              </div>
             </>
           )}
 
