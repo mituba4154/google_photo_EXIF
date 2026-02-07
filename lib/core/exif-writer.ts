@@ -7,11 +7,17 @@ import { logger } from '@/lib/utils/logger';
 
 let exiftool: ExifTool | null = null;
 
+/** EXIF 書き込み結果 */
+export type WriteResult =
+  | { status: 'written' }
+  | { status: 'skipped'; reason: string };
+
 /** ExifTool インスタンスを取得（遅延初期化） */
 export function getExifTool(maxProcs = 8): ExifTool {
   if (!exiftool) {
     // Increased default maxProcs from 4 to 8 for better parallelization
-    exiftool = new ExifTool({ maxProcs, taskTimeoutMillis: 30000 });
+    // Timeout increased to 60s to handle parallel processing under load
+    exiftool = new ExifTool({ maxProcs, taskTimeoutMillis: 60000 });
   }
   return exiftool;
 }
@@ -41,7 +47,7 @@ export async function writeExifFromJson(
   imagePath: string,
   metadata: TakeoutJson,
   options: ProcessingOptions
-): Promise<void> {
+): Promise<WriteResult> {
   const et = getExifTool(options.maxConcurrency);
 
   // Prepare backup and read operations in parallel when possible
@@ -69,7 +75,7 @@ export async function writeExifFromJson(
     logger.info('Skipping: DateTimeOriginal already exists', {
       path: imagePath,
     });
-    throw new Error('Skipping: DateTimeOriginal already exists and overwrite is disabled');
+    return { status: 'skipped', reason: 'DateTimeOriginal already exists and overwrite is disabled' };
   }
 
   // 4. タグ構築
@@ -129,4 +135,5 @@ export async function writeExifFromJson(
   }
 
   logger.info('EXIF written', { path: imagePath });
+  return { status: 'written' };
 }
