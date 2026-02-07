@@ -19,9 +19,10 @@ export async function matchJsonToImages(
   const unmatchedImages = new Set(images);
   const unmatchedJsons = new Set(jsons);
 
-  // --- Strategy 1: Exact match (image.jpg ↔ image.jpg.json) ---
+  // --- Strategy 1: Exact match (image.jpg ↔ image.jpg.json or image.jpg.supplemental-metadata.json) ---
   for (const json of jsons) {
-    const expectedImage = json.replace(/\.json$/, '');
+    // Try standard .json format first
+    let expectedImage = json.replace(/\.json$/, '');
     if (unmatchedImages.has(expectedImage)) {
       const metadata = await parseAndValidateJson(json);
       matched.push({
@@ -32,12 +33,33 @@ export async function matchJsonToImages(
       });
       unmatchedImages.delete(expectedImage);
       unmatchedJsons.delete(json);
+    } else {
+      // Try .supplemental-metadata.json format
+      expectedImage = json.replace(/\.supplemental-metadata\.json$/, '');
+      if (expectedImage !== json && unmatchedImages.has(expectedImage)) {
+        const metadata = await parseAndValidateJson(json);
+        matched.push({
+          imagePath: expectedImage,
+          jsonPath: json,
+          matchConfidence: 'exact',
+          metadata,
+        });
+        unmatchedImages.delete(expectedImage);
+        unmatchedJsons.delete(json);
+      }
     }
   }
 
-  // --- Strategy 2: Extension match (image.jpg ↔ image.json) ---
+  // --- Strategy 2: Extension match (image.jpg ↔ image.json or image.supplemental-metadata.json) ---
   for (const json of [...unmatchedJsons]) {
-    const jsonBase = json.replace(/\.json$/, '');
+    // First try to remove .supplemental-metadata.json, then fall back to .json
+    let jsonBase;
+    if (json.endsWith('.supplemental-metadata.json')) {
+      jsonBase = json.replace(/\.supplemental-metadata\.json$/, '');
+    } else {
+      jsonBase = json.replace(/\.json$/, '');
+    }
+
     for (const image of [...unmatchedImages]) {
       const imageWithoutExt = image.replace(/\.[^.]+$/, '');
       if (jsonBase === imageWithoutExt) {
@@ -57,7 +79,15 @@ export async function matchJsonToImages(
 
   // --- Strategy 3: Fuzzy match ---
   for (const json of [...unmatchedJsons]) {
-    const jsonBase = path.basename(json, '.json');
+    // Handle both .json and .supplemental-metadata.json
+    let jsonBase = path.basename(json, '.json');
+    if (jsonBase === path.basename(json)) {
+      // If .json didn't remove anything, try .supplemental-metadata.json
+      const baseName = path.basename(json);
+      if (baseName.endsWith('.supplemental-metadata.json')) {
+        jsonBase = baseName.replace(/\.supplemental-metadata\.json$/, '');
+      }
+    }
     const normalizedJson = normalizeName(jsonBase);
 
     let bestMatch: string | null = null;

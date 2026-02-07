@@ -84,4 +84,49 @@ describe('matchJsonToImages', () => {
     expect(result.unmatched.images.length).toBe(1);
     expect(result.unmatched.jsons.length).toBe(1);
   });
+
+  test('Supplemental metadata exact match: IMG_0002.HEIC ↔ IMG_0002.HEIC.supplemental-metadata.json', async () => {
+    const imgPath = path.join(TEST_DIR, 'supplemental', 'IMG_0002.HEIC');
+    const jsonPath = path.join(TEST_DIR, 'supplemental', 'IMG_0002.HEIC.supplemental-metadata.json');
+    await createFile(imgPath, 'fake-image');
+    await createFile(jsonPath, makeJson('IMG_0002.HEIC'));
+
+    const result = await matchJsonToImages([imgPath], [jsonPath]);
+    expect(result.matched.length).toBe(1);
+    expect(result.matched[0].matchConfidence).toBe('exact');
+    expect(result.matched[0].imagePath).toBe(imgPath);
+    expect(result.matched[0].jsonPath).toBe(jsonPath);
+    expect(result.unmatched.images.length).toBe(0);
+    expect(result.unmatched.jsons.length).toBe(0);
+  });
+
+  test('Supplemental metadata extension match: IMG_0003.PNG ↔ IMG_0003.supplemental-metadata.json', async () => {
+    const imgPath = path.join(TEST_DIR, 'supplemental-ext', 'IMG_0003.PNG');
+    const jsonPath = path.join(TEST_DIR, 'supplemental-ext', 'IMG_0003.supplemental-metadata.json');
+    await createFile(imgPath, 'fake-image');
+    await createFile(jsonPath, makeJson('IMG_0003.PNG'));
+
+    const result = await matchJsonToImages([imgPath], [jsonPath]);
+    expect(result.matched.length).toBe(1);
+    expect(result.matched[0].matchConfidence).toBe('exact');
+    expect(result.matched[0].imagePath).toBe(imgPath);
+    expect(result.matched[0].jsonPath).toBe(jsonPath);
+  });
+
+  test('Mixed standard and supplemental metadata files', async () => {
+    const img1 = path.join(TEST_DIR, 'mixed', 'photo1.jpg');
+    const json1 = path.join(TEST_DIR, 'mixed', 'photo1.jpg.json');
+    const img2 = path.join(TEST_DIR, 'mixed', 'IMG_0004.HEIC');
+    const json2 = path.join(TEST_DIR, 'mixed', 'IMG_0004.HEIC.supplemental-metadata.json');
+
+    await createFile(img1, 'fake-image-1');
+    await createFile(json1, makeJson('photo1.jpg'));
+    await createFile(img2, 'fake-image-2');
+    await createFile(json2, makeJson('IMG_0004.HEIC'));
+
+    const result = await matchJsonToImages([img1, img2], [json1, json2]);
+    expect(result.matched.length).toBe(2);
+    expect(result.unmatched.images.length).toBe(0);
+    expect(result.unmatched.jsons.length).toBe(0);
+  });
 });
