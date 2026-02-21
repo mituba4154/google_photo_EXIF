@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useProcessingStore } from '@/store/processing-store';
 import type { ProcessingJob } from '@/lib/types/processing';
 
 export default function ProcessingStatus() {
   const { currentJobId, currentJob, updateJobStatus } = useProcessingStore();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (!currentJobId) return;
@@ -47,6 +48,12 @@ export default function ProcessingStatus() {
     };
   }, [currentJobId, updateJobStatus]);
 
+  useEffect(() => {
+    if (!currentJob || currentJob.endTime) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [currentJob]);
+
   if (!currentJobId || !currentJob) return null;
 
   const progress =
@@ -60,7 +67,7 @@ export default function ProcessingStatus() {
 
   const elapsed = currentJob.endTime
     ? currentJob.endTime - currentJob.startTime
-    : Date.now() - currentJob.startTime;
+    : now - currentJob.startTime;
 
   const formatTime = (ms: number) => {
     const s = Math.floor(ms / 1000);
