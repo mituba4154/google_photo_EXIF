@@ -8,6 +8,7 @@ export default function ProcessingStatus() {
   const { currentJobId, currentJob, updateJobStatus } = useProcessingStore();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const currentJobEndTime = currentJob?.endTime;
 
   useEffect(() => {
     if (!currentJobId) return;
@@ -49,10 +50,10 @@ export default function ProcessingStatus() {
   }, [currentJobId, updateJobStatus]);
 
   useEffect(() => {
-    if (!currentJob || currentJob.endTime) return;
+    if (!currentJobId || currentJobEndTime) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [currentJob]);
+  }, [currentJobId, currentJobEndTime]);
 
   if (!currentJobId || !currentJob) return null;
 
