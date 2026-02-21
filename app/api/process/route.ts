@@ -5,7 +5,6 @@ import type {
   ProcessingJob,
   ProcessingOptions,
 } from '@/lib/types/processing';
-import { analyzeTakeoutFolder } from '@/lib/core/analyzer';
 import { matchJsonToImages } from '@/lib/core/matcher';
 import {
   writeExifFromJson,
